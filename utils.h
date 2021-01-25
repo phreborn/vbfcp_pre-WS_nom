@@ -75,6 +75,8 @@ vector<string> readInLines(const char * cfgfilepath){
     {
         cfgFile.getline(tmp,1000);
         string line(tmp);
+        if(line.find("#") != string::npos) continue;
+        if(line=="") continue;
         readin.push_back(line);
     }
 
