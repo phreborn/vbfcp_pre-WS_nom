@@ -127,3 +127,27 @@ void getCatBinning(string cfg, map<TString, vector<float>> &catBins){
     catBins[tsCat] = f_vec;
   }
 }
+
+TString getMCSampleName(int mcID){
+  string name;
+  readConfigFile("/scratchfs/atlas/chenhr/atlaswork/VBF_CP/syst/MCSamples.config", Form("SampleName.%d", mcID), name);
+  while(name.find(" ")!=std::string::npos) { name.replace(name.find(" "), 1, ""); }
+  return name.data();
+}
+
+TH1F *getCutFlowHist(int mcID, TFile* file){
+  TString suffix = "_noDalitz_weighted";
+  TString cutFlowName = Form("CutFlow_%s%s", getMCSampleName(mcID).Data(), suffix.Data());
+  TH1F *cutFlow = (TH1F*) file->Get(cutFlowName);
+  return cutFlow;
+}
+
+double getSumOfWeights(int mcID, TFile* file){
+  double NxAOD = getCutFlowHist(mcID, file)->GetBinContent(1);
+  double NDxAOD = getCutFlowHist(mcID, file)->GetBinContent(2);
+  double WDxAOD = getCutFlowHist(mcID, file)->GetBinContent(3);
+
+  double weightSum = WDxAOD*NxAOD/NDxAOD;
+  cout<<"xAOD, DxAOD, allEvt: "<<NxAOD<<", "<<NDxAOD<<", "<<WDxAOD<<endl;
+  return weightSum;
+}

@@ -149,24 +149,6 @@ void getBkgParaYield()
   getCatCuts(cf_cats, catCuts); for(auto c : catCuts) cout<<c.first<<c.second<<endl;
   getCatBinning(cf_bins, catBins); for(auto c : catBins) { cout<<"dafad"<<c.first<<endl; for(auto b : c.second)  cout<<b<<", "; cout<<endl<<endl; }
 
-  map<TString, pair<float, float>> bins;
-  //bins["b1"] = make_pair(-999999999, -3);
-  //bins["b2"] = make_pair(-3, -1.5);
-  //bins["b3"] = make_pair(-1.5, -1);
-  //bins["b4"] = make_pair(-1, -0.5);
-  //bins["b5"] = make_pair(-0.5, 0);
-  //bins["b6"] = make_pair(0, 0.5);
-  //bins["b7"] = make_pair(0.5, 1);
-  //bins["b8"] = make_pair(1, 1.5);
-  //bins["b9"] = make_pair(1.5, 3);
-  //bins["b10"] = make_pair(3, 99999999);
-  bins["b1"] = make_pair(-999999999, -2);
-  bins["b2"] = make_pair(-2, -1);
-  bins["b3"] = make_pair(-1, 0);
-  bins["b4"] = make_pair(0, 1);
-  bins["b5"] = make_pair(1, 2);
-  bins["b6"] = make_pair(2, 99999999);
-
   map<TString, TString> bins_name;
   bins_name["b1"] = "bin0";
   bins_name["b2"] = "bin1";
@@ -191,35 +173,28 @@ for(auto cat : catCuts){
   TString catName = cat.first; cout<<"=== "<<catName<<" ==="<<endl;
   string catCut = cat.second;
 
-  vector<float> binEdges = catBins[catName];
-  for(int i = 0; i < binEdges.size()-1; i++){
     TCanvas *canv = new TCanvas("c", "canvas", 800, 600);
 
-    TString binName = Form("b%i", i+1); cout<<binName<<endl;
+    cout<<"=============="<<catName<<"=============="<<endl;
 
-    double b_l = binEdges.at(i);
-    double b_r = binEdges.at(i+1);
-
-    cout<<"=============="<<catName<<"_"<<binName<<"=============="<<endl;
-
-    TTree *t_out = new TTree("CollectionTree10"+bins_name[binName], "");
+    TTree *t_out = new TTree(Form("CollectionTree_%s", catName.Data()), "");
   
     //t_out->Branch("m_yy_SR", &myy_out, "m_yy_SR/D");
     t_out->Branch("m_yy", &myy_out, "m_yy/D");
     //t_out->Branch("oo1", &oo_out, "oo1/D");
     t_out->Branch("weight", &weight_out, "weight/D");
   
-    TFile *f_SB = new TFile(Form("hists_dataSB_%s_%s.root", catName.Data(), binName.Data()), "read");
+    TFile *f_SB = new TFile(Form("hists_dataSB_%s.root", catName.Data()), "read");
     TTree *t_SB = (TTree*) f_SB->Get("CollectionTree");
     TH1F *h_SB = (TH1F*) f_SB->Get("m_yy_dataSB");
     float n_SB = h_SB->Integral();
   
-    TFile *f_ggh = new TFile(Form("hists_ggh_%s_%s.root", catName.Data(), binName.Data()), "read");
+    TFile *f_ggh = new TFile(Form("MC16Xs/fullrun2/hists_ggh_%s.root", catName.Data()), "read");
     TTree *t_ggh = (TTree*) f_ggh->Get("CollectionTree");
     TH1F *h_ggh = (TH1F*) f_ggh->Get("m_yy_ggh");
     float n_ggh = h_ggh->Integral();
   
-    TFile *f_vbf = new TFile(Form("hists_vbf_%s_%s.root", catName.Data(), binName.Data()), "read");
+    TFile *f_vbf = new TFile(Form("MC16Xs/fullrun2/hists_vbf_%s.root", catName.Data()), "read");
     //TFile *f_vbf = new TFile("hists_vbf_minus_0010_"+bin->first+".root", "read");
     TTree *t_vbf = (TTree*) f_vbf->Get("CollectionTree");
     TH1F *h_vbf = (TH1F*) f_vbf->Get("m_yy_vbf");
@@ -257,9 +232,9 @@ for(auto cat : catCuts){
     //polyexp.fitTo(dh_SB, Range("SB1,SB2"), Save());
     polyexp.fitTo(ds_SB, Range("SB1,SB2"), Save());
 
-    m_para[catName+"_"+binName].push_back(b.getVal());
+    m_para[catName].push_back(b.getVal());
     //m_para[bin->first].push_back(0.1);// Exp
-    m_para[catName+"_"+binName].push_back(c.getVal());// ExpPoly2
+    m_para[catName].push_back(c.getVal());// ExpPoly2
 
     RooPlot* myy_frame = m_yy.frame(Title("fit to m_yy distribution"));
     //ds_SB.plotOn(myy_frame);
@@ -277,7 +252,7 @@ for(auto cat : catCuts){
     float n_SR = n_SB*frac_SR_SB;cout<<"n_SR: "<<n_SR<<endl;cout<<"n_SB: "<<n_SB<<endl;
     float n_bkg = n_SB+n_SR;
  
-    m_para[catName+"_"+binName].push_back(n_bkg);
+    m_para[catName].push_back(n_bkg);
  
     RooRealVar mean("mean","mean",120000,130000);// MeV or GeV
     RooRealVar sigma("sigma","sigma",700,10000);
@@ -293,7 +268,7 @@ for(auto cat : catCuts){
     DSCB_myy.plotOn(myy_frame);
     myy_frame->Draw();
 
-    canv->SaveAs("plotFit/"+catName+"_"+binName+".png");
+    canv->SaveAs("plotFit/"+catName+".png");
     delete canv;
 
     RooRealVar N_sig("N_sig","", n_sig);
@@ -341,7 +316,6 @@ for(auto cat : catCuts){
     //f_out->Close();
 
     delete t_out;
-  }// end bin
 }
   ofstream ofpara("para_bkg.csv", ios::out);
   if(!ofpara){
