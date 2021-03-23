@@ -41,7 +41,7 @@ void datafill()
   cats["LT"] = {-1, 0.14, 0.05, 1.};
   cats["LL"] = {-1, 0.14, -1., 0.05};
 
-  TString dirpath = "/scratchfs/atlas/chenhr/atlaswork/VBF_CP/h025/";
+  TString dirpath = "/scratchfs/atlas/chenhr/atlaswork/VBF_CP/h026/";
   std::string path_str = dirpath.Data();
   std::vector<std::string> sub_dirs = getDirBinsSortedPath(path_str);
 
