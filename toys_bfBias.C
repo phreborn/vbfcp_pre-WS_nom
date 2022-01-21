@@ -1,3 +1,12 @@
+#include "/scratchfs/atlas/huirun/atlaswork/ATLAS_style/atlasrootstyle/AtlasUtils.h"
+#include "/scratchfs/atlas/huirun/atlaswork/ATLAS_style/atlasrootstyle/AtlasStyle.h"
+#include "/scratchfs/atlas/huirun/atlaswork/ATLAS_style/atlasrootstyle/AtlasLabels.h"
+
+#ifdef __CLING__
+#include "/scratchfs/atlas/huirun/atlaswork/ATLAS_style/atlasrootstyle/AtlasLabels.C"
+#include "/scratchfs/atlas/huirun/atlaswork/ATLAS_style/atlasrootstyle/AtlasUtils.C"
+#endif
+
 #include "utils.h"
 #include "/afs/ihep.ac.cn/users/g/guofy/HggTwoSidedCBPdf.cxx"
 #include "/afs/ihep.ac.cn/users/g/guofy/HggTwoSidedCBPdf.h"
@@ -157,6 +166,8 @@ TH1F *scaleHistXaxis(TH1F* hist, float scale){
 
 void toys_bfBias()
 {
+  SetAtlasStyle();
+
   char *cf_cats = (char*)"cats.cfg";
   char *cf_bins = (char*)"binnings.cfg";
   map<TString, string> catCuts;
@@ -258,7 +269,8 @@ catName.Tokenize(bdtCat, from, "[_]");
     m_yy.setRange("SB1", 105000, SR_up);
     m_yy.setRange("SB2", SR_lo, 160000);
   
-    polyexp.fitTo(dh_SB, Range("SB1,SB2"), Save());
+    //polyexp.fitTo(dh_SB, Range("SB1,SB2"), Save());
+    polyexp.fitTo(dh_SB, Save());
 //    polyexp.fitTo(ds_SB, Range("SB1,SB2"), Save());
 
     m_para[catName].push_back(b.getVal());
@@ -386,10 +398,12 @@ catName.Tokenize(bdtCat, from, "[_]");
         hout_toy->Fill(myy);
         count++;
       }
-      if (itoytodraw == i) {
+      if (itoytodraw == i && funcname == "ExpPoly2") {
         RooDataHist dh_toy("dh_toy", "", m_yy, Import(*hout_toy));// !!! order
         TCanvas *c2 = new TCanvas("c1", "canvas", 800, 600);
         RooPlot* myyFr2 = m_yy.frame();
+        myyFr2->GetXaxis()->SetTitle("m_{#gamma#gamma} [MeV]");
+        myyFr2->SetTitle(Form("toy %i "+catName, i));
         dh_toy.plotOn(myyFr2, Binning(55, 105000, 160000));
         model_asiv.plotOn(myyFr2);
         myyFr2->Draw();
@@ -397,11 +411,52 @@ catName.Tokenize(bdtCat, from, "[_]");
         //myyFr2->addTH1(hout_toy);
         //hout_toy->Draw("same e");
         cout<<n_sig+n_bkg<<", "<<hout_toy->Integral()<<endl;
-        c2->SaveAs(Form("plotFit/toy%i_"+catName+".png", i));
+
+        myText(0.22, 0.88, 1, Form(catName+", toy %i from "+funcname, i));
+
+        c2->SaveAs(Form("plotFit/toy%i_"+catName+"_"+funcname+".png", i));
       }
 
       f_out_toy->cd();
       hout_toy->Write();
+    }
+
+    if (funcname == "ExpPoly2") {
+      TCanvas *c3 = new TCanvas("c1", "canvas", 800, 600);
+      RooPlot* myyFr3 = m_yy.frame();
+      myyFr3->GetXaxis()->SetTitle("m_{#gamma#gamma} [MeV]");
+      dh_SB.plotOn(myyFr3, Binning(55, 105000, 160000));
+      polyexp.plotOn(myyFr3);
+      myyFr3->Draw();
+
+      myText(0.22, 0.88, 1, (catName+", background fit with "+funcname).Data());
+
+      c3->SaveAs("plotFit/bkgfit_"+catName+"_"+funcname+".png");
+
+      TCanvas *c4 = new TCanvas("c1", "canvas", 800, 600);
+      RooPlot* myyFr4 = m_yy.frame();
+      myyFr4->GetXaxis()->SetTitle("m_{#gamma#gamma} [MeV]");
+      ds_sig.plotOn(myyFr4, Binning(55, 105000, 160000));
+      DSCB_myy.plotOn(myyFr4);
+      myyFr4->Draw();
+
+      myText(0.22, 0.88, 1, (catName+", signal fit with DSCB").Data());
+
+      c4->SaveAs("plotFit/sigfit_"+catName+"_DSCB.png");
+    }
+
+    if(catName.Contains("LT")){
+      RooDataHist dh_asi("dh_asi", "", m_yy, Import(*hout_asi));// !!! order
+      TCanvas *c5 = new TCanvas("c1", "canvas", 800, 600);
+      RooPlot* myyFr5 = m_yy.frame();
+      myyFr5->GetXaxis()->SetTitle("m_{#gamma#gamma} [MeV]");
+      dh_asi.plotOn(myyFr5, Binning(55, 105000, 160000));
+      model_asiv.plotOn(myyFr5);
+      myyFr5->Draw();
+
+      myText(0.22, 0.88, 1, (catName+", Asimov data from "+funcname).Data());
+
+      c5->SaveAs("plotFit/Asimov_"+catName+"_DSCB_"+funcname+".png");
     }
 
 //    ofdata.close();
