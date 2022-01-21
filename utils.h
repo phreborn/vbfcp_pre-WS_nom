@@ -130,7 +130,7 @@ void getCatBinning(string cfg, map<TString, vector<float>> &catBins){
 
 TString getMCSampleName(int mcID){
   string name;
-  readConfigFile("/scratchfs/atlas/chenhr/atlaswork/VBF_CP/syst/MCSamples.config", Form("SampleName.%d", mcID), name);
+  readConfigFile("/scratchfs/atlas/huirun/atlaswork/VBF_CP/syst/MCSamples.config", Form("SampleName.%d", mcID), name);
   while(name.find(" ")!=std::string::npos) { name.replace(name.find(" "), 1, ""); }
   return name.data();
 }

@@ -5,8 +5,8 @@ using namespace TMVA::Experimental;
 void mcfill()
 {
   map<TString,TString> samples_id;
-  samples_id["ggh"] = "343981";
-  samples_id["vbf"] = "346214";
+  samples_id["ggF"] = "343981";
+  samples_id["VBF"] = "346214";
 
   map<TString,float> lumi;
   lumi["mc16a"] = 36207.66;
@@ -20,14 +20,14 @@ void mcfill()
   getCatCuts(cf_cats, catCuts); for(auto c : catCuts) cout<<c.first<<c.second<<endl;
   //getCatBinning(cf_bins, catBins); for(auto c : catBins) { cout<<"dafad"<<c.first<<endl; for(auto b : c.second)  cout<<b<<", "; cout<<endl<<endl; }
 
-  string config = "config";
+  string config = "config_sysNtuple";
   string baseCuts = "";
   string blindCut = "";
   readConfigFile(config.data(), "cuts", baseCuts);
   readConfigFile(config.data(), "blindSel", blindCut);
 
-  baseCuts = TString(baseCuts.data()).ReplaceAll("??", "Nominal_").Data();
-  blindCut = TString(blindCut.data()).ReplaceAll("??", "Nominal_").Data();
+  baseCuts = TString(baseCuts.data()).ReplaceAll("??", "Nominal.").Data();
+  blindCut = TString(blindCut.data()).ReplaceAll("??", "Nominal.").Data();
 
   //bool doBlind = true;
   //string blind_tmp = "";
@@ -35,7 +35,7 @@ void mcfill()
   //if(blind_tmp.find("TRUE") != std::string::npos) doBlind = true;
   //else doBlind = false;
 
-  TString dirpath = "/scratchfs/atlas/chenhr/atlaswork/VBF_CP/ntuples/sys/yield/";
+  TString dirpath = "/publicfs/atlas/atlasnew/higgs/hgg/chenhr/vbfcp/ntuple/h026/sys/";
   std::string path_str = dirpath.Data();
   std::vector<std::string> sub_dirs = getDirBinsSortedPath(path_str);
 
@@ -57,7 +57,8 @@ void mcfill()
       std::vector<std::string> fs = getDirBinsSortedPath(path_str+d+"/");
       for(auto f : fs){
         if(f==".") continue;
-        if(f.find(ID.Data()) == std::string::npos) continue;
+        if(f.find(sample.Data()) == std::string::npos) continue;
+        if(f.find("photonsys") == std::string::npos) continue;
         if(f.find(".root") == std::string::npos) continue;
         cout<<"f: "<<path_str+"/"+d+"/"+f<<endl;
         files.push_back(path_str+d+"/"+f);
@@ -75,12 +76,12 @@ void mcfill()
       TString catName = cat.first; cout<<"=== "<<catName<<" ==="<<endl;
       string catCut = cat.second;
 
-      catCut = TString(catCut.data()).ReplaceAll("??", "Nominal_").Data();
+      catCut = TString(catCut.data()).ReplaceAll("??", "Nominal.").Data();
 
       TH1F *h_myy = new TH1F("m_yy_"+sample, "", 110, 105, 160);
       TH1F *h_oo = new TH1F("oo_"+sample, "", 40, -20, 20);
 
-      TChain ch("Nominal", "Nominal");
+      TChain ch("output", "output");
     
       for(auto f : files){
         TString filepath = f.data();
@@ -92,7 +93,7 @@ void mcfill()
 
       }
 
-      ROOT::RDataFrame df(ch, {"Nominal_m_yy"});
+      ROOT::RDataFrame df(ch, {"Nominal.m_yy"});
 
       string allCuts = "";
       string allCuts_noBlind = Form("%s && %s", baseCuts.data(), catCut.data()); cout<<"all cuts: "<<allCuts<<endl;
@@ -101,14 +102,14 @@ void mcfill()
       allCuts = allCuts_noBlind;
 
       auto df_cut = df.Filter(allCuts);
-      auto df_alias = df_cut.Alias("m_yy", "Nominal_m_yy")
-                            .Alias("oo1", "Nominal_oo1")
-                            .Alias("BDTout_ggH", "Nominal_BDTout_ggH")
-                            .Alias("BDTout_yy", "Nominal_BDTout_yy")
-                            .Alias("cat_BDTggH_BDTyy", "Nominal_cat_BDTggH_BDTyy");
-      auto df_wt = df_alias.Define("weight", [&sumOfWeights, &luminosity](float xsec, float weight){
-        return (float) (luminosity*xsec*weight/sumOfWeights);
-      }, {"Nominal_xsec_kF_eff", "Nominal_weight_catCoup_XGBoost_ttH"}); cout<<df_wt.Sum("weight").GetValue()<<endl;
+      auto df_alias = df_cut.Alias("m_yy", "Nominal.m_yy")
+                            .Alias("oo1", "Nominal.oo1")
+                            .Alias("BDTout_ggH", "Nominal.BDTout_ggH")
+                            .Alias("BDTout_yy", "Nominal.BDTout_yy")
+                            .Alias("cat_BDTggH_BDTyy", "Nominal.cat_BDTggH_BDTyy");
+      auto df_wt = df_alias.Define("weight", [&sumOfWeights, &luminosity](float xsec, float weight, float wjvt, float wfjvt){
+        return (float) (luminosity*xsec*weight*wjvt*wfjvt/sumOfWeights);
+      }, {"xsec_kF_eff", "Nominal.weight", "Nominal.weightJvt_30", "Nominal.weightFJvt_30"}); cout<<df_wt.Sum("weight").GetValue()<<endl;
 
       df_wt.Foreach([&h_myy, &h_oo](float myy, float oo, float weight){
         h_myy->Fill(myy/1000, weight);

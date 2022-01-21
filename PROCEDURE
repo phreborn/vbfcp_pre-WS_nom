@@ -1,0 +1,8 @@
+source clean.sh
+
+root -b datafill.C
+root -b mcfill.C
+
+source mergeMCs.sh
+
+root -b getBkgParaYield.C # -> para_bkg.csv

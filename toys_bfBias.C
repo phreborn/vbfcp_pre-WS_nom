@@ -140,7 +140,22 @@ RooDSCBShape::RooDSCBShape(const char *name, const char *title,
     return result;
   }
 
-void getBkgParaYield()
+TH1F *scaleHistXaxis(TH1F* hist, float scale){
+  int nbins = hist->GetNbinsX();
+  float min = hist->GetXaxis()->GetXmin();
+  float max = hist->GetXaxis()->GetXmax();
+  cout<<"nbins, min, max: "<<nbins<<", "<<min<<", "<<max<<endl;
+  TH1F *hout = new TH1F("hout", "", nbins, min*scale, max*scale);
+  for (int i = 1; i <= nbins; i++){
+    float bcon = hist->GetBinContent(i);
+    float berr = hist->GetBinError(i);
+    hout->SetBinContent(i, bcon);
+    hout->SetBinError(i, berr);
+  }
+  return hout;
+}
+
+void toys_bfBias()
 {
   char *cf_cats = (char*)"cats.cfg";
   char *cf_bins = (char*)"binnings.cfg";
@@ -166,39 +181,50 @@ void getBkgParaYield()
 
   double myy_out, oo_out, weight_out;
 
-  TFile *f_out = new TFile("tree_asimov.root", "recreate");
+  TString funcname = "ExpPoly2";
+
+  TFile *f_out = new TFile("tree_bfBias_Asimov_"+funcname+".root", "recreate");
+  TFile *f_out_toy = new TFile("tree_bfBias_toys.root", "recreate");
   //TFile *f_out = new TFile("tree_asimov_minus_0010.root", "recreate");
 
 for(auto cat : catCuts){
   TString catName = cat.first; cout<<"=== "<<catName<<" ==="<<endl;
   string catCut = cat.second;
 
+TString bdtCat;
+Ssiz_t from = 0;
+catName.Tokenize(bdtCat, from, "[_]");
+
+
     TCanvas *canv = new TCanvas("c", "canvas", 800, 600);
 
     cout<<"=============="<<catName<<"=============="<<endl;
 
     TTree *t_out = new TTree(Form("CollectionTree_%s", catName.Data()), "");
-  
+ 
     //t_out->Branch("m_yy_SR", &myy_out, "m_yy_SR/D");
     t_out->Branch("m_yy", &myy_out, "m_yy/D");
     //t_out->Branch("oo1", &oo_out, "oo1/D");
     t_out->Branch("weight", &weight_out, "weight/D");
   
-    TFile *ft_SB = new TFile(Form("tree_dataSB_OO_%s.root", catName.Data()), "read");
-    TTree *t_SB = (TTree*) ft_SB->Get("CollectionTree");
-    TFile *fh_SB = new TFile(Form("hists_dataSB_%s.root", catName.Data()), "read");
-    TH1F *h_SB = (TH1F*) fh_SB->Get("m_yy_dataSB");
+//    TFile *ft_SB = new TFile(Form("tree_dataSB_OO_%s.root", catName.Data()), "read");
+//    TTree *t_SB = (TTree*) ft_SB->Get("CollectionTree");
+//    TFile *fh_SB = new TFile(Form("hists_dataSB_%s.root", catName.Data()), "read");
+    TFile *fh_SB = new TFile("../bkgTemplate/template_"+bdtCat+".root", "read");
+    TH1F *h_SB = (TH1F*) fh_SB->Get("template_uncer_"+catName);
     float n_SB = h_SB->Integral();
-  
-    TFile *f_ggh = new TFile(Form("MC16Xs/fullrun2/hists_ggh_%s.root", catName.Data()), "read");
+
+    TH1F *h_SB_MeV = scaleHistXaxis(h_SB, 1000);
+ 
+    TFile *f_ggh = new TFile(Form("MC16Xs/fullrun2/hists_ggF_%s.root", catName.Data()), "read");
     TTree *t_ggh = (TTree*) f_ggh->Get("CollectionTree");
-    TH1F *h_ggh = (TH1F*) f_ggh->Get("m_yy_ggh");
+    TH1F *h_ggh = (TH1F*) f_ggh->Get("m_yy_ggF");
     float n_ggh = h_ggh->Integral();
   
-    TFile *f_vbf = new TFile(Form("MC16Xs/fullrun2/hists_vbf_%s.root", catName.Data()), "read");
+    TFile *f_vbf = new TFile(Form("MC16Xs/fullrun2/hists_VBF_%s.root", catName.Data()), "read");
     //TFile *f_vbf = new TFile("hists_vbf_minus_0010_"+bin->first+".root", "read");
     TTree *t_vbf = (TTree*) f_vbf->Get("CollectionTree");
-    TH1F *h_vbf = (TH1F*) f_vbf->Get("m_yy_vbf");
+    TH1F *h_vbf = (TH1F*) f_vbf->Get("m_yy_VBF");
     float n_vbf = h_vbf->Integral();
   
     TH1F h_sig = *h_ggh+*h_vbf;
@@ -212,10 +238,10 @@ for(auto cat : catCuts){
     RooRealVar weight("weight", "weight", -10, 100);
     RooPlot* oo_frame = oo1.frame(Title("oo projection of DSCB(oo)*polyexp(m_yy)")) ;
   
-//    RooDataHist dh_SB("dh_SB", "", m_yy, Import(*h_SB));// !!! order
+    RooDataHist dh_SB("dh_SB", "", m_yy, Import(*h_SB_MeV));// !!! order
 //    RooDataHist dh_sig("dh_sig", "", m_yy, Import(h_sig));
  
-    RooDataSet ds_SB("ds_SB","", RooArgSet(m_yy, weight), WeightVar(weight), Import(*t_SB));
+//    RooDataSet ds_SB("ds_SB","", RooArgSet(m_yy, weight), WeightVar(weight), Import(*t_SB));
     RooDataSet ds_ggh("ds_ggh","", RooArgSet(m_yy, weight), WeightVar(weight), Import(*t_ggh));
     RooDataSet ds_vbf("ds_vbf","", RooArgSet(m_yy, weight), WeightVar(weight), Import(*t_vbf));
     ds_ggh.append(ds_vbf);
@@ -232,8 +258,8 @@ for(auto cat : catCuts){
     m_yy.setRange("SB1", 105000, SR_up);
     m_yy.setRange("SB2", SR_lo, 160000);
   
-    //polyexp.fitTo(dh_SB, Range("SB1,SB2"), Save());
-    polyexp.fitTo(ds_SB, Range("SB1,SB2"), Save());
+    polyexp.fitTo(dh_SB, Range("SB1,SB2"), Save());
+//    polyexp.fitTo(ds_SB, Range("SB1,SB2"), Save());
 
     m_para[catName].push_back(b.getVal());
     //m_para[bin->first].push_back(0.1);// Exp
@@ -249,12 +275,13 @@ for(auto cat : catCuts){
     RooAbsReal *int_SB2 = polyexp.createIntegral(m_yy, NormSet(m_yy), Range("SB2"));
     RooAbsReal *int_SR = polyexp.createIntegral(m_yy, NormSet(m_yy), Range("SR"));
     float frac_SR_SB = int_SR->getVal()/(int_SB1->getVal()+int_SB2->getVal());
+    float frac_SR = int_SR->getVal()/(int_SR->getVal()+int_SB1->getVal()+int_SB2->getVal());
     cout<<"int_SR: "<<int_SR->getVal()<<endl;
     cout<<"int_SB1: "<<int_SB1->getVal()<<endl;
     cout<<"int_SB2: "<<int_SB2->getVal()<<endl;
   
-    float n_SR = n_SB*frac_SR_SB;cout<<"n_SR: "<<n_SR<<endl;cout<<"n_SB: "<<n_SB<<endl;
-    float n_bkg = n_SB+n_SR;
+    float n_SR = n_SB*frac_SR;cout<<"n_SR: "<<n_SR<<endl;cout<<"n_SB: "<<n_SB<<endl;
+    float n_bkg = n_SB;
  
     m_para[catName].push_back(n_bkg);
  
@@ -284,9 +311,19 @@ for(auto cat : catCuts){
 //      ofdata.close();
 //      cout<<"can't open file for writing"<<endl;
 //    }
-  
-    int n_points = 550;
+ 
+    TCanvas *c1 = new TCanvas("c1", "canvas", 800, 600);
+    RooPlot* myyFr1 = m_yy.frame(Title("fit to m_yy distribution"));
+    model_asiv.plotOn(myyFr1);
+    myyFr1->Draw();
+    float frMax = myyFr1->GetMaximum();
+    cout<<"maximum of myy: "<<frMax<<endl;
+    c1->SaveAs("plotFit/model_asiv_"+catName+".png");
+ 
+    int n_points = 220;
     double interval = (160000.-105000.)/n_points;
+
+    TH1F *hout_asi = new TH1F(Form("Asi_%s", catName.Data()), "", n_points, 105000, 160000);
   
     RooArgSet nset(m_yy);
   
@@ -301,39 +338,87 @@ for(auto cat : catCuts){
       double pdf_val = model_asiv.getVal(&nset);//cout<<"pdf: "<<pdf_val<<endl;
       weight_out = pdf_val*interval*(n_sig+n_bkg);//cout<<"weight: "<<weight_out<<endl;
       t_out->Fill();
+      hout_asi->Fill(myy_out, weight_out);
       intPdf += pdf_val*interval;
 
 //      for(int i = 0; i < (int)(weight_out+0.5); i++){
 //        ofdata<<myy_out<<endl;
 //      }
     }
+    f_out->cd();
+    t_out->Write();
+    hout_asi->Write();
+    delete t_out;
+
     cout<<"intPdf: "<<intPdf<<endl;
     cout<<"n_ggh, n_vbf: "<<n_ggh<<", "<<n_vbf<<endl;
     cout<<"n_SB, n_sig: "<<n_SB<<", "<<n_sig<<endl;
     cout<<"n_SR: "<<n_SR<<endl;
 
+    int nToys = 50;
+    int itoytodraw = 1;
+
+    TRandom rdm;
+    TRandom rdm1;
+    TRandom rdm2;
+    rdm.SetSeed(10*n_sig*n_bkg);
+    rdm1.SetSeed(n_sig/n_bkg);
+    rdm2.SetSeed(n_bkg/n_sig);
+    for(int i = 0; i < nToys; i++){
+      TH1F *hout_toy = new TH1F(Form("toy_%s_%i", catName.Data(), i), "", n_points, 105000, 160000);
+
+      //int rNtot = rdm.Poisson(n_sig+n_bkg);
+      //int rNtot = floor(n_sig+n_bkg) + (rdm.Uniform() > 0.5 ? 1 : 0);
+      int rNtot = floor(n_sig+n_bkg) + rdm.Poisson((n_sig+n_bkg)-floor(n_sig+n_bkg));
+      cout<<catName<<" "<<i<<" toy, Ntot RNtot: "<<n_sig+n_bkg<<", "<<rNtot<<endl;
+      int count = 0;
+      while(count < rNtot){
+        float rX = rdm1.Uniform();
+        float rY = rdm2.Uniform();
+  
+        float myy = 55000*rX+105000;
+        float pdf = frMax*rY;
+  
+        m_yy.setVal(myy);
+        float pdf_val = model_asiv.getVal(&nset);
+  
+        if(pdf_val < pdf) continue;
+        hout_toy->Fill(myy);
+        count++;
+      }
+      if (itoytodraw == i) {
+        RooDataHist dh_toy("dh_toy", "", m_yy, Import(*hout_toy));// !!! order
+        TCanvas *c2 = new TCanvas("c1", "canvas", 800, 600);
+        RooPlot* myyFr2 = m_yy.frame();
+        dh_toy.plotOn(myyFr2, Binning(55, 105000, 160000));
+        model_asiv.plotOn(myyFr2);
+        myyFr2->Draw();
+        //model_asiv.plotOn(myyFr2, Normalization(n_sig+n_bkg, RooAbsReal::NumEvent));
+        //myyFr2->addTH1(hout_toy);
+        //hout_toy->Draw("same e");
+        cout<<n_sig+n_bkg<<", "<<hout_toy->Integral()<<endl;
+        c2->SaveAs(Form("plotFit/toy%i_"+catName+".png", i));
+      }
+
+      f_out_toy->cd();
+      hout_toy->Write();
+    }
+
 //    ofdata.close();
-
-    f_out->cd();
-    t_out->Write();
-
-    //f_out->Close();
-
-    delete t_out;
 }
-  ofstream ofpara("para_bkg.tmp", ios::out);
-  if(!ofpara){
-    ofpara.close();
-    cout<<"error can't open file for record"<<endl;
-  }
-
-  for(auto p = m_para.begin(); p != m_para.end(); p++){
-    ofpara<<p->first<<","<<p->second[B]<<","<<p->second[C]<<","<<p->second[POWA]<<","<<p->second[YIELD]<<endl;
-  }
-
-  for(auto p = m_para.begin(); p != m_para.end(); p++){
-    cout<<p->first<<","<<p->second[B]<<","<<p->second[C]<<","<<p->second[POWA]<<","<<p->second[YIELD]<<endl;
-  }
+//  ofstream ofpara("para_bkg.tmp", ios::out);
+//  if(!ofpara){
+//    ofpara.close();
+//    cout<<"error can't open file for record"<<endl;
+//  }
+//
+//  for(auto p = m_para.begin(); p != m_para.end(); p++){
+//    ofpara<<p->first<<","<<p->second[B]<<","<<p->second[C]<<","<<p->second[POWA]<<","<<p->second[YIELD]<<endl;
+//  }
+//
+//  for(auto p = m_para.begin(); p != m_para.end(); p++){
+//    cout<<p->first<<","<<p->second[B]<<","<<p->second[C]<<","<<p->second[POWA]<<","<<p->second[YIELD]<<endl;
+//  }
 
   //RooPlot* myy_frame = m_yy.frame(Title("sideband data (polynomial exponential)"));// !!! order
   //dh_SB.plotOn(myy_frame);
