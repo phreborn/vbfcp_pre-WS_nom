@@ -41,7 +41,7 @@ void datafill()
   cats["LT"] = {-1, 0.14, 0.05, 1.};
   cats["LL"] = {-1, 0.14, -1., 0.05};
 
-  TString dirpath = "/scratchfs/atlas/chenhr/atlaswork/VBF_CP/h026/";
+  TString dirpath = "/scratchfs/atlas/huirun/atlaswork/VBF_CP/h026/";
   std::string path_str = dirpath.Data();
   std::vector<std::string> sub_dirs = getDirBinsSortedPath(path_str);
 
@@ -103,8 +103,8 @@ void datafill()
 
     auto df_cut = df.Filter(allCuts);
     df_cut.Foreach([&h_myy, &h_oo](float myy, float oo){ h_myy->Fill(myy/1000); h_oo->Fill(oo); }, {"m_yy", "oo1"}); cout<<df_cut.Sum("weight").GetValue()<<endl;
-    //df_cut.Snapshot("CollectionTree", Form("tree_%s_OO_%s_%s.root", sample.Data(), catName.Data(), binName.Data()), {"weight", "m_yy", "oo1"});
-    df_cut.Snapshot("CollectionTree", Form("hists_%s_%s.root", sample.Data(), catName.Data()), {"weight", "m_yy", "oo1", "BDTout_ggH", "BDTout_yy"});
+    df_cut.Snapshot("CollectionTree", Form("tree_%s_OO_%s.root", sample.Data(), catName.Data()), {"weight", "m_yy", "oo1"});
+    //df_cut.Snapshot("CollectionTree", Form("hists_%s_%s.root", sample.Data(), catName.Data()), {"weight", "m_yy", "oo1", "BDTout_ggH", "BDTout_yy"});
   
     TFile *f_out = new TFile(Form("hists_%s_%s.root", sample.Data(), catName.Data()),"update");
 
