@@ -64,8 +64,8 @@ void datafill()
 
   cout<<"\n"<<endl;
 
-  TString sample = "dataSB";
-//  TString sample = "fulldata";
+//  TString sample = "dataSB";
+  TString sample = "fulldata";
 
   cout<<"processing "<<sample<<".."<<endl;
 

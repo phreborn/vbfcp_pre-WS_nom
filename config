@@ -1,0 +1,4 @@
+#cuts: ??isPassed
+cuts: (!??isDalitz) && ??isPassed && ??N_j_30>1 && (??DeltaEta_jj>2 || ??DeltaEta_jj<-2) && (??Zepp>-5 && ??Zepp<5)
+doBlind: FALSE
+blindSel: (??m_yy/1000<120 || ??m_yy/1000>130)
